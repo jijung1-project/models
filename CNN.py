@@ -24,6 +24,9 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 
 def imageLoad(dirname):
+
+    X = np.load("/Users/jaewan/Desktop/X.npy")
+    y_test = np.load("/Users/jaewan/Desktop/y.npy")
     images = list()
     filenames = os.listdir(dirname)
     y = list()
@@ -43,6 +46,7 @@ def imageLoad(dirname):
 
     le = LabelEncoder()
     le.fit(y)
+    print(le.classes_)
     y = le.transform(y)
     return images, y
 
