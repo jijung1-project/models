@@ -5,18 +5,14 @@ from keras.layers import Dense, Activation, Dropout, Flatten,\
  Conv2D, MaxPooling2D
 from keras.layers.normalization import BatchNormalization
 import numpy as np
-from keras.utils import np_utils, plot_model
-from google.colab import drive
+from keras.utils import np_utils
 from sklearn.model_selection import train_test_split
 
-drive.mount('/content/drive')
+from CNN import imageLoad
 
 np.random.seed(1000)
 
 # (2) Get Data
-X = np.load('/content/drive/My Drive/X_224.npy')
-y = np.load('/content/drive/My Drive/y_224.npy')
-
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=1)
 X_train = X_train.astype('float32')
 X_test = X_test.astype('float32')
@@ -100,11 +96,11 @@ model.add(Dropout(0.4))
 model.add(BatchNormalization())
 
 # Output Layer
-model.add(Dense(30))
+model.add(Dense(17))
 model.add(Activation('softmax'))
 
 model.summary()
-plot_model(model, to_file='./model.png', show_shapes=True)
+
 # (4) Compile
 model.compile(loss='categorical_crossentropy', optimizer='adam',\
  metrics=['accuracy'])

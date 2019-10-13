@@ -1,28 +1,16 @@
 import keras
-from keras.models import Sequential
-from keras.utils import np_utils
-from keras.preprocessing.image import ImageDataGenerator
-from keras.layers import Dense, Activation, Flatten, Dropout, BatchNormalization
-from keras.layers import Conv2D, MaxPooling2D
-from keras.datasets import cifar100
+import matplotlib.pyplot as plt
+import numpy as np
+from google.colab import drive
 from keras import regularizers
 from keras.callbacks import LearningRateScheduler, EarlyStopping
-import numpy as np
+from keras.layers import Conv2D, MaxPooling2D
+from keras.layers import Dense, Flatten, Dropout, BatchNormalization
+from keras.models import Sequential
+from keras.preprocessing.image import ImageDataGenerator
+from keras.utils import np_utils
 from keras.utils import plot_model
-import matplotlib.pyplot as plt
-import glob
-import os.path as path
-from scipy import misc
-import os
-import glob
-from skimage.transform import resize
-import skimage.io as io
-from skimage.io import imsave
-from PIL import Image
-import imageio
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
-from google.colab import drive
 
 
 # def imageLoad(dirname):
