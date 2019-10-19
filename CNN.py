@@ -1,114 +1,137 @@
-# (1) Importing dependency
-import keras
 from keras.models import Sequential
-from keras.layers import Dense, Activation, Dropout, Flatten,\
- Conv2D, MaxPooling2D
-from keras.layers.normalization import BatchNormalization
+from keras.utils import np_utils
+from keras.preprocessing.image import ImageDataGenerator
+from keras.layers import Dense, Activation, Flatten, Dropout, BatchNormalization
+from keras.layers import Conv2D, MaxPooling2D
+from keras import regularizers
+from keras.callbacks import LearningRateScheduler, EarlyStopping, ReduceLROnPlateau
 import numpy as np
-from keras.utils import np_utils, plot_model
-from google.colab import drive
+from keras.utils import plot_model
+import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
+from google.colab import drive
+import os
+from keras.callbacks import ModelCheckpoint
+import tensorflow as tf
+from keras.backend.tensorflow_backend import set_session
+import keras
 
-drive.mount('/content/drive')
+reduce_lr = ReduceLROnPlateau(monitor='val_acc', factor=0.5, cooldown= 3,
+                              patience=5, min_lr=0.0001)
 
-np.random.seed(1000)
+def create_cnn(input_shape):
+    cnn = Sequential()
+    cnn.add(Conv2D(32, (3, 3), activation='relu', padding='same', kernel_regularizer=regularizers.l2(0.001),
+                   input_shape=input_shape))
+    cnn.add(BatchNormalization())
+    cnn.add(Conv2D(32, (3, 3), activation='relu', padding='same', kernel_regularizer=regularizers.l2(0.001)))
+    cnn.add(BatchNormalization())
+    cnn.add(Conv2D(32, (3, 3), activation='relu', padding='same', kernel_regularizer=regularizers.l2(0.001)))
+    cnn.add(BatchNormalization())
+    cnn.add(MaxPooling2D(pool_size=(2, 2)))
+    cnn.add(Dropout(0.2))
 
-# (2) Get Data
-X = np.load('/content/drive/My Drive/X_224.npy')
-y = np.load('/content/drive/My Drive/y_224.npy')
+    cnn.add(Conv2D(64, (3, 3), activation='relu', padding='same', kernel_regularizer=regularizers.l2(0.001)))
+    cnn.add(BatchNormalization())
+    cnn.add(Conv2D(64, (3, 3), activation='relu', padding='same', kernel_regularizer=regularizers.l2(0.001)))
+    cnn.add(BatchNormalization())
+    cnn.add(Conv2D(64, (3, 3), activation='relu', padding='same', kernel_regularizer=regularizers.l2(0.001)))
+    cnn.add(BatchNormalization())
+    cnn.add(MaxPooling2D(pool_size=(2, 2)))
+    cnn.add(Dropout(0.3))
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=1)
-X_train = X_train.astype('float32')
-X_test = X_test.astype('float32')
-
-X_train = X_train / 255.0
-X_test = X_test / 255.0
-
-y_train = np_utils.to_categorical(y_train)
-y_test = np_utils.to_categorical(y_test)
-
-print(X_train.shape)
-print(y_train.shape)
-print(X_test.shape)
-print(y_test.shape)
+    cnn.add(Conv2D(128, (3, 3), activation='relu', padding='same', kernel_regularizer=regularizers.l2(0.001)))
+    cnn.add(BatchNormalization())
+    cnn.add(Conv2D(128, (3, 3), activation='relu', padding='same', kernel_regularizer=regularizers.l2(0.001)))
+    cnn.add(BatchNormalization())
+    cnn.add(Conv2D(128, (3, 3), activation='relu', padding='same', kernel_regularizer=regularizers.l2(0.001)))
+    cnn.add(BatchNormalization())
+    cnn.add(MaxPooling2D(pool_size=(2, 2)))
+    cnn.add(Dropout(0.4))
 
 
-# (3) Create a sequential model
-model = Sequential()
 
-# 1st Convolutional Layer
-model.add(Conv2D(filters=96, input_shape=(224,224,3), kernel_size=(11,11),\
- strides=(4,4), padding='valid'))
-model.add(Activation('relu'))
-# Pooling
-model.add(MaxPooling2D(pool_size=(2,2), strides=(2,2), padding='valid'))
-# Batch Normalisation before passing it to the next layer
-model.add(BatchNormalization())
+    cnn.add(Flatten())
+    cnn.add(Dense(1024, activation='relu'))
+    cnn.add(BatchNormalization())
+    cnn.add(Dropout(0.5))
+    cnn.add(Dense(150, activation='softmax'))
+    # model summary
+    cnn.summary()
 
-# 2nd Convolutional Layer
-model.add(Conv2D(filters=256, kernel_size=(11,11), strides=(1,1), padding='valid'))
-model.add(Activation('relu'))
-# Pooling
-model.add(MaxPooling2D(pool_size=(2,2), strides=(2,2), padding='valid'))
-# Batch Normalisation
-model.add(BatchNormalization())
+    return cnn
 
-# 3rd Convolutional Layer
-model.add(Conv2D(filters=384, kernel_size=(3,3), strides=(1,1), padding='valid'))
-model.add(Activation('relu'))
-# Batch Normalisation
-model.add(BatchNormalization())
 
-# 4th Convolutional Layer
-model.add(Conv2D(filters=384, kernel_size=(3,3), strides=(1,1), padding='valid'))
-model.add(Activation('relu'))
-# Batch Normalisation
-model.add(BatchNormalization())
+def data_augmenation(X_train):
+    # Data Augmentation
+    augmentation = ImageDataGenerator(
+        rotation_range=30,
+        width_shift_range=0.2,
+        height_shift_range=0.2,
+        horizontal_flip=True,
+    )
+    augmentation.fit(X_train)
 
-# 5th Convolutional Layer
-model.add(Conv2D(filters=256, kernel_size=(3,3), strides=(1,1), padding='valid'))
-model.add(Activation('relu'))
-# Pooling
-model.add(MaxPooling2D(pool_size=(2,2), strides=(2,2), padding='valid'))
-# Batch Normalisation
-model.add(BatchNormalization())
+    return augmentation
 
-# Passing it to a dense layer
-model.add(Flatten())
-# 1st Dense Layer
-model.add(Dense(4096, input_shape=(224*224*3,)))
-model.add(Activation('relu'))
-# Add Dropout to prevent overfitting
-model.add(Dropout(0.4))
-# Batch Normalisation
-model.add(BatchNormalization())
 
-# 2nd Dense Layer
-model.add(Dense(4096))
-model.add(Activation('relu'))
-# Add Dropout
-model.add(Dropout(0.4))
-# Batch Normalisation
-model.add(BatchNormalization())
+def main():
+    drive.mount('/content/drive')
+    X_train = np.load("/content/drive/My Drive/X_300_train.npy")
+    X_test = np.load("/content/drive/My Drive/X_300_test.npy")
+    y_train = np.load("/content/drive/My Drive/y_300_train.npy")
+    y_test = np.load("/content/drive/My Drive/y_300_test.npy")
+    print("OK")
+    y_train = np_utils.to_categorical(y_train)
+    y_test = np_utils.to_categorical(y_test)
+    print("OK")
 
-# 3rd Dense Layer
-model.add(Dense(1000))
-model.add(Activation('relu'))
-# Add Dropout
-model.add(Dropout(0.4))
-# Batch Normalisation
-model.add(BatchNormalization())
+    MODEL_SAVE_FOLDER_PATH = '/content/drive/My Drive/models/'
+    if not os.path.exists(MODEL_SAVE_FOLDER_PATH):
+        os.mkdir(MODEL_SAVE_FOLDER_PATH)
 
-# Output Layer
-model.add(Dense(30))
-model.add(Activation('softmax'))
+    model_path = MODEL_SAVE_FOLDER_PATH + '{epoch:02d}-{val_acc:.4f}.hdf5'
+    cb_checkpoint = ModelCheckpoint(filepath=model_path, monitor='val_acc', verbose=1, save_best_only=True)
 
-model.summary()
-plot_model(model, to_file='./model.png', show_shapes=True)
-# (4) Compile
-model.compile(loss='categorical_crossentropy', optimizer='adam',\
- metrics=['accuracy'])
+    # early stop
+    cb_early_stopping = EarlyStopping(monitor='val_acc', patience=20)
 
-# (5) Train
-model.fit(X_train, y_train, batch_size=64, epochs=1, verbose=1, \
-validation_split=0.2, shuffle=True)
+    cnn = create_cnn(X_train.shape[1:])
+    plot_model(cnn, to_file='./model.png', show_shapes=True)
+    # adam optimizer
+    optimizer = keras.optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=None)
+
+    cnn.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
+    augmented_images = data_augmenation(X_train)
+    hist = cnn.fit_generator(augmented_images.flow(X_train, y_train, batch_size=200),
+                             steps_per_epoch=X_train.shape[0] / 200, epochs=200, verbose=1,
+                             validation_data=(X_test, y_test), shuffle=True,
+                             callbacks=[reduce_lr, cb_early_stopping,
+                                        cb_checkpoint])
+    # hist = cnn.fit(X_train, y_train, batch_size=50, epochs=200, verbose=1, validation_data=(X_test, y_test), callbacks=[reduce_lr, cb_early_stopping,cb_checkpoint] )
+    test_accuracy = cnn.evaluate(X_test, y_test, verbose=1)
+    print('test accuracy: %.3f | test loss: %.3f' % (test_accuracy[1] * 100, test_accuracy[0]))
+
+    # print loss and accuracy in plot
+    fig, loss_ax = plt.subplots()
+
+    acc_ax = loss_ax.twinx()
+
+    loss_ax.plot(hist.history['loss'], 'y', label='train loss')
+    loss_ax.plot(hist.history['val_loss'], 'r', label='val loss')
+
+    acc_ax.plot(hist.history['acc'], 'b', label=' acc')
+    acc_ax.plot(hist.history['val_acc'], 'g', label='val acc')
+
+    loss_ax.set_xlabel('epoch')
+    loss_ax.set_ylabel('loss')
+    acc_ax.set_ylabel('accuray')
+
+    loss_ax.legend(loc='upper left')
+    acc_ax.legend(loc='lower left')
+
+    plt.show()
+
+
+if __name__ == '__main__':
+    main()

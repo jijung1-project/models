@@ -1,18 +1,22 @@
 # (1) Importing dependency
-import keras
+import matplotlib.pyplot as plt
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Dropout, Flatten,\
  Conv2D, MaxPooling2D
 from keras.layers.normalization import BatchNormalization
 import numpy as np
-from keras.utils import np_utils
+from keras.utils import np_utils, plot_model
+from google.colab import drive
 from sklearn.model_selection import train_test_split
 
-from CNN import imageLoad
+drive.mount('/content/drive')
 
 np.random.seed(1000)
 
 # (2) Get Data
+X = np.load('/content/drive/My Drive/X_224.npy')
+y = np.load('/content/drive/My Drive/y_224.npy')
+
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=1)
 X_train = X_train.astype('float32')
 X_test = X_test.astype('float32')
@@ -96,15 +100,38 @@ model.add(Dropout(0.4))
 model.add(BatchNormalization())
 
 # Output Layer
-model.add(Dense(17))
+model.add(Dense(30))
 model.add(Activation('softmax'))
 
 model.summary()
-
+plot_model(model, to_file='./model.png', show_shapes=True)
 # (4) Compile
 model.compile(loss='categorical_crossentropy', optimizer='adam',\
  metrics=['accuracy'])
 
 # (5) Train
-model.fit(X_train, y_train, batch_size=64, epochs=1, verbose=1, \
+hist = model.fit(X_train, y_train, batch_size=64, epochs=1, verbose=1, \
 validation_split=0.2, shuffle=True)
+
+test_accuracy = model.evaluate(X_test, y_test, verbose=1)
+print('test accuracy: %.3f | test loss: %.3f' % (test_accuracy[1] * 100, test_accuracy[0]))
+
+# print loss and accuracy in plot
+fig, loss_ax = plt.subplots()
+
+acc_ax = loss_ax.twinx()
+
+loss_ax.plot(hist.history['loss'], 'y', label='train loss')
+loss_ax.plot(hist.history['val_loss'], 'r', label='val loss')
+
+acc_ax.plot(hist.history['acc'], 'b', label=' acc')
+acc_ax.plot(hist.history['val_acc'], 'g', label='val acc')
+
+loss_ax.set_xlabel('epoch')
+loss_ax.set_ylabel('loss')
+acc_ax.set_ylabel('accuray')
+
+loss_ax.legend(loc='upper left')
+acc_ax.legend(loc='lower left')
+
+plt.show()
